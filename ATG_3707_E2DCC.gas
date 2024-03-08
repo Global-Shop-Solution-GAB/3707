@@ -1,0 +1,193 @@
+Program.Sub.ScreenSU.Start
+Program.Sub.ScreenSU.End
+
+Program.Sub.Preflight.Start
+
+Variable.Global.sFileP.Declare(String)
+Program.Sub.Preflight.End
+
+Program.Sub.Main.Start
+'enm
+'8/3/2010
+'Iowa Metal Spinners
+'User Hook/Custom Menu Item
+'revision on 9/16/2010
+
+F.ODBC.Connection!con.OpenConnection(V.Ambient.PDSN,V.Ambient.PUser,V.Ambient.PPass)
+
+F.Intrinsic.Control.CallSub(Getfile)
+
+Program.Sub.Main.End
+
+Program.Sub.Upload.Start
+V.Local.sFileLoc.Declare(String)
+Variable.Local.sReadFile.Declare(String)
+V.Local.iRow.Declare(String)
+V.Local.iPos.Declare(String)
+V.Local.ix.Declare(Long)
+V.Local.iFileHdl.Declare(Long)
+V.Local.bFileEnd.Declare(Boolean)
+V.Local.sUM.Declare(String)
+V.Local.sSQL.Declare(String)
+V.Local.iCols.Declare(Long)
+V.Local.sSt.Declare(String)
+V.Local.iCt.Declare(Long)
+V.Local.sPart.Declare(String)
+V.Local.sPRev.Declare(String)
+V.Local.sFType.Declare(String)
+V.Local.sFileD.Declare(String)
+V.Local.sApp.Declare(String)
+V.Local.sWB.Declare(String)
+V.Local.sWS.Declare(String)
+V.Local.iRowCount.Declare(Long)
+V.Local.bRet.Declare(Boolean)
+V.Local.sError.Declare(String)
+V.Local.iGrp.Declare(Long)
+V.Local.sKey.Declare(String)
+V.Local.sType.Declare(String)
+
+
+'F.Intrinsic.Debug.Stop
+'.Intrinsic.UI.Msgbox("Router Subroutine")
+F.Intrinsic.Control.SetErrorHandler("ULError")
+F.Intrinsic.Control.ClearErrors
+V.Local.sApp.Set("MSExcel")
+V.Local.sWB.Set("WB")
+Function.Automation.MSExcel.CheckPresence(Variable.local.bRet)
+'F.Intrinsic.UI.Msgbox("Checked to see if Excel Exists")
+F.Intrinsic.Control.If(V.Local.bRet,=,True)
+	F.Intrinsic.UI.InvokeWaitDialog("Beginning Upload","")
+	'F.Intrinsic.UI.Msgbox("Excel Exists")
+	F.Intrinsic.File.GetHandle(V.Local.iFilehdl)
+	F.Intrinsic.File.OpenForRead(V.Global.sFileP,V.Local.iFileHdl)
+	Function.Automation.MSExcel.CreateAppObject(V.Local.sApp)
+	Function.Automation.MSExcel.OpenWorkbook(V.Local.sApp,V.Local.sWB,V.Global.sFileP)
+	F.Automation.MSExcel.OpenWorksheet(V.Local.sWB,V.Local.sWS,1)
+	F.Intrinsic.Control.CallSub("ErrorLog","sText","Opened WS","bFirst","False")
+		'F.Intrinsic.Debug.Stop
+		F.Automation.MSExcel.RowCount(V.Local.sWS,V.Local.iRowCount)
+		F.Intrinsic.Control.CallSub("ErrorLog","sText","Getting Row Count","bFirst","False")
+		'F.Intrinsic.UI.ChangeWaitStatus("Reading Part Data",0)
+'		F.Intrinsic.Control.For(V.Local.iRow,2,V.Local.iRowCount,1)
+		F.Intrinsic.Control.For(V.Local.iRow,5684,V.Local.iRowCount,1)
+			F.Intrinsic.Debug.SetLA("On Record ",V.Local.iRow," out of ",V.Local.iRowCount)
+			F.Intrinsic.Debug.Stop
+			F.Intrinsic.UI.ChangeWaitStatus(V.Ambient.LastAction,V.Local.iRow,0,V.Local.iRowCount)
+			F.Automation.MSExcel.ReadRow(V.Local.sWS,V.Local.iRow,1,19,V.Local.sST)
+			F.Intrinsic.String.Split(V.Local.sST,"*!*",V.Local.sst)
+'			F.Intrinsic.String.Split(V.Local.sSt(1),"\",V.Local.sFileD)
+			F.Intrinsic.String.Split(V.Local.sSt(3),"\",V.Local.sFileD)
+			V.Local.sFType.Set(V.Local.sFileD(1))
+			F.Intrinsic.Control.If(V.Local.sFType.ucase,=,"CONTROL PLAN")
+				V.Local.iGrp.Set(3)
+			F.Intrinsic.Control.ElseIf(V.Local.sFType.UCase,=,"PRINTS")
+				V.Local.iGrp.Set(1)
+			F.Intrinsic.Control.Else
+				V.Local.iGrp.Set(2)
+			F.Intrinsic.Control.EndIf
+			F.Intrinsic.Control.If(V.Local.sST(0).Length,>,17)
+				F.Intrinsic.String.Left(V.Local.sST(0),17,V.Local.sPart)
+				'F.Intrinsic.String.Mid(V.Local.sST(0),18,20,V.Local.sPRev)
+			F.Intrinsic.Control.Else
+				F.Intrinsic.String.Left(V.Local.sST(0),17,V.Local.sPart)
+			F.Intrinsic.Control.EndIf
+			'F.Intrinsic.Debug.Stop
+			F.Intrinsic.String.Replace(V.Local.sPart,""""," ",V.Local.sPart)
+			F.Intrinsic.String.Replace(V.Local.sPart,"'"," ",V.Local.sPart)
+			'V.Local.sPRev.Set(V.Local.sSt(17))
+			V.Local.sPRev.Set(V.Local.sSt(1))
+			F.Intrinsic.String.GSSPartString(V.Local.sPart,V.Local.sPRev,V.Local.sPart)
+			V.Local.sKey.Set(V.Local.sPart)
+			V.Local.iPos.Set(V.Local.sFileD.UBound)
+			F.Intrinsic.String.Split(V.Local.sFileD(v.Local.iPos),".",V.Local.sType)
+			'F.Intrinsic.Debug.Stop
+			'DCC for Inventory
+			F.Global.DocumentControl.CreateReference(V.Local.sKey,30,V.Local.ix)
+			F.Intrinsic.Debug.SetLA("Create DCC Reference ",V.Local.sKey," DCC Type 30 with ID number ",V.Local.ix)
+			F.Intrinsic.Control.CallSub(Errorlog,"sText",V.Ambient.LastAction,"bFirst",False)
+			F.Intrinsic.Debug.Stop
+			F.Global.DocumentControl.AddDocument(V.Local.ix,V.Local.sST(3).Trim,"",V.Local.iGrp,"")
+			F.Intrinsic.Debug.SetLA("Add DCC Document ",V.Local.sKey," DCC Type 30 with ID number ",V.Local.ix)
+			F.Intrinsic.Control.CallSub(Errorlog,"sText",V.Ambient.LastAction,"bFirst",False)
+			'DCC for Router
+			F.Intrinsic.String.Replace(V.Local.sPart,"-","",V.Local.sKey)
+			F.Global.DocumentControl.CreateReference(V.Local.sKey,35,V.Local.ix)
+			F.Intrinsic.Debug.SetLA("Create DCC Reference ",V.Local.sKey," DCC Type 35 with ID number ",V.Local.ix)
+			F.Intrinsic.Control.CallSub(Errorlog,"sText",V.Ambient.LastAction,"bFirst",False)
+			F.Intrinsic.Debug.Stop
+			F.Global.DocumentControl.AddDocument(V.Local.ix,V.Local.sST(3).Trim,"",V.Local.iGrp,"")
+			F.Intrinsic.Debug.SetLA("Add DCC Document ",V.Local.sKey," DCC Type 35 with ID number ",V.Local.ix)
+			F.Intrinsic.Control.CallSub(Errorlog,"sText",V.Ambient.LastAction,"bFirst",False)
+		F.Intrinsic.Control.Next(V.Local.iRow)
+F.Intrinsic.Control.Else
+	F.Intrinsic.UI.Msgbox("Excel is not present on this machine")
+	F.Intrinsic.Control.End
+F.Intrinsic.Control.EndIf
+F.Intrinsic.UI.CloseWaitDialog
+F.Automation.MSExcel.DestroyAllObjects(V.Local.sApp,V.Local.sWB,V.Local.sWS)
+F.Intrinsic.UI.CloseWaitDialog
+F.Intrinsic.Control.CallSub(Unload)
+F.Intrinsic.Control.ExitSub
+
+F.Intrinsic.Control.Label("ULError")
+F.Intrinsic.Control.If(V.Ambient.ErrorNumber,<>,0)
+	F.Intrinsic.String.Concat("Error Occurred ",V.Ambient.ErrorNumber," with description ",V.Ambient.ErrorDescription,V.Local.sError)
+	F.Intrinsic.Control.CallSub("ErrorLog","sText",V.Local.sError,"bFirst","False")
+	F.Intrinsic.UI.Msgbox(V.Ambient.ErrorDescription)
+	F.Intrinsic.Control.ErrorResume(True)
+'	F.Automation.MSExcel.DestroyAllObjects(V.Local.sApp,V.Local.sWB,V.Local.sWS)
+'	F.Intrinsic.UI.CloseWaitDialog
+F.Intrinsic.Control.EndIf
+
+
+
+Program.Sub.Upload.End
+
+Program.Sub.GetFile.Start
+V.Local.sFileLoc.Declare(String)
+
+F.Intrinsic.UI.ShowOpenFileDialog("","*.*",V.Caller.FilesDir,V.Local.sFileLoc)
+Function.Intrinsic.Control.If(Variable.local.sFileLoc,=,"***CANCEL***")
+	F.Intrinsic.Control.End
+Function.Intrinsic.Control.Else
+	V.Global.sFileP.Set(V.Local.sFileLoc)
+	'F.Intrinsic.UI.Msgbox(V.Local.sFileLoc)
+	F.Intrinsic.Control.CallSub("ErrorLog","sText","Starting the program","bFirst","False")
+	F.Intrinsic.Control.CallSub(Upload)
+Function.Intrinsic.Control.EndIf
+
+
+Program.Sub.GetFile.End
+
+Program.Sub.ErrorLog.Start
+V.Local.iHdl.Declare(Long)
+V.Local.sFile.Declare(String)
+V.Local.sLine.Declare(String)
+
+
+F.Intrinsic.File.GetHandle(V.Local.iHdl)
+F.Intrinsic.String.Concat(V.Caller.FilesDir,"\E2_Upload.log",V.Local.sFile)
+'F.Intrinsic.UI.Msgbox(V.Local.sFile)
+F.Intrinsic.Control.If(V.Args.bFirst,=,"True")
+	F.Intrinsic.File.OpenForWrite(V.Local.sFile,V.Local.iHdl)
+F.Intrinsic.Control.Else
+	F.Intrinsic.File.OpenForAppend(V.Local.sFile,V.Local.iHdl)
+F.Intrinsic.Control.EndIf
+
+F.Intrinsic.String.Concat(V.Ambient.NewLine,V.Ambient.Now,V.Ambient.Tab,V.Args.sText,V.local.sLine)
+
+F.Intrinsic.File.WriteLine(V.Local.iHdl,V.local.sLine)
+
+F.Intrinsic.File.CloseFile(V.Local.iHdl)
+
+
+Program.Sub.ErrorLog.End
+
+Program.Sub.Unload.Start
+F.ODBC.Connection!con.Close
+F.Intrinsic.Control.End
+
+
+Program.Sub.Unload.End
+
+
